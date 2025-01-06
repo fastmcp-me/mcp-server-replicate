@@ -156,6 +156,22 @@ The client system provides robust API interaction:
 - Resource streaming
 - Webhook support
 
+### Installation and Usage
+
+The package provides two main ways to run the server:
+
+1. Using UVX (recommended):
+   ```bash
+   uvx --from mcp-server-replicate mcp_server_replicate
+   ```
+
+2. Using UV directly:
+   ```bash
+   uv run mcp_server_replicate
+   ```
+
+The server can be integrated with Claude Desktop by configuring the appropriate command in `claude_desktop_config.json`.
+
 ## Testing Strategy
 
 1. Unit Tests
