@@ -5,6 +5,7 @@
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Type Checker](https://img.shields.io/badge/type%20checker-mypy-blue.svg)](https://github.com/python/mypy)
 [![Ruff](https://img.shields.io/badge/linter-ruff-red.svg)](https://github.com/astral-sh/ruff)
+[![PyPI version](https://badge.fury.io/py/mcp-server-replicate.svg)](https://pypi.org/project/mcp-server-replicate/)
 
 A FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference with a focus on image generation.
 
@@ -52,18 +53,17 @@ Create a photorealistic mountain landscape at sunset with snow-capped peaks, qua
 
 ## Installation
 
-> **Note**: This package will be available on PyPI shortly. For now, install directly from GitHub:
+You can install the package directly from PyPI:
 
 ```bash
-# Install UV if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Using UV (recommended)
+uv pip install mcp-server-replicate
 
-# Clone and set up the project
-git clone https://github.com/cursor-ai/mcp-server-replicate.git
-cd mcp-server-replicate
+# Using UVX for isolated environments
+uvx install mcp-server-replicate
 
-# Install dependencies using UV
-uv pip install --system
+# Using pip
+pip install mcp-server-replicate
 ```
 
 ## Claude Desktop Integration
@@ -79,21 +79,29 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 code %APPDATA%\Claude\claude_desktop_config.json
 ```
 
-3. Add the server configuration:
+3. Add the server configuration using one of these options:
 
 ```json
 {
   "mcpServers": {
     "replicate": {
+      // Option 1: Using UVX (recommended)
+      "command": "uvx",
+      "args": ["run", "mcp-server-replicate"]
+    }
+  }
+}
+```
+
+OR
+
+```json
+{
+  "mcpServers": {
+    "replicate": {
+      // Option 2: Using UV
       "command": "uv",
-      "args": [
-        "--directory",
-        "/ABSOLUTE/PATH/TO/mcp-server-replicate",
-        "run",
-        "python",
-        "-m",
-        "mcp_server_replicate"
-      ]
+      "args": ["run", "python", "-m", "mcp_server_replicate"]
     }
   }
 }
@@ -102,7 +110,11 @@ code %APPDATA%\Claude\claude_desktop_config.json
 4. Set your Replicate API key:
 
 ```bash
+# Option 1: Set in your environment
 export REPLICATE_API_TOKEN=your_api_key_here
+
+# Option 2: Create a .env file in your home directory
+echo "REPLICATE_API_TOKEN=your_api_key_here" > ~/.env
 ```
 
 5. Restart Claude Desktop completely
