@@ -607,6 +607,7 @@ class ReplicateClient:
                 "description": data.get("description"),
                 "models": [
                     {
+                        "id": f"{model['owner']}/{model['name']}",
                         "owner": model["owner"],
                         "name": model["name"],
                         "description": model.get("description"),
