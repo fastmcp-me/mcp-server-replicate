@@ -83,11 +83,15 @@ code %APPDATA%\Claude\claude_desktop_config.json
 
 ```json
 {
-  "replicate": {
-    "command": "uvx",
-    "args": ["mcp-server-replicate"],
-    "env": {
-      "REPLICATE_API_TOKEN": "APIKEY"
+  "globalShortcut": "Shift+Alt+A",
+  "mcpServers": {
+    "replicate": {
+      "command": "uv",
+      "args": ["tool", "run", "mcp-server-replicate"],
+      "env": {
+        "REPLICATE_API_TOKEN": "APITOKEN"
+      },
+      "cwd": "$PATH_TO_REPO"
     }
   }
 }
