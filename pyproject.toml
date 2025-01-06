@@ -7,12 +7,19 @@ packages = ["src/mcp_server_replicate"]
 
 [project]
 name = "mcp-server-replicate"
-version = "0.1.0"
+version = "0.1.2"
 description = "FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-keywords = ["mcp", "replicate", "ai", "inference", "stable-diffusion", "image-generation"]
+keywords = [
+  "mcp",
+  "replicate",
+  "ai",
+  "inference",
+  "stable-diffusion",
+  "image-generation",
+]
 authors = [{ name = "Gerred Dillon", email = "hello@gerred.org" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -25,12 +32,12 @@ classifiers = [
   "Topic :: Multimedia :: Graphics",
 ]
 dependencies = [
-    "mcp[cli]>=1.2.0",
-    "replicate>=1.0.4",
-    "python-dotenv>=1.0.0",
-    "jsonschema>=4.21.1",
-    "httpx>=0.26.0",
-    "pydantic>=2.5.0",
+  "mcp[cli]>=1.2.0",
+  "replicate>=1.0.4",
+  "python-dotenv>=1.0.0",
+  "jsonschema>=4.21.1",
+  "httpx>=0.26.0",
+  "pydantic>=2.5.0",
 ]
 
 [project.optional-dependencies]
@@ -46,12 +53,12 @@ dev = [
 ]
 
 [project.scripts]
-mcp_server_replicate = "mcp_server_replicate.__main__:main"
+mcp-server-replicate = "mcp_server_replicate.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/cursor-ai/mcp-server-replicate"
-Documentation = "https://github.com/cursor-ai/mcp-server-replicate#readme"
-Issues = "https://github.com/cursor-ai/mcp-server-replicate/issues"
+Homepage = "https://github.com/gerred/mcp-server-replicate"
+Documentation = "https://github.com/gerred/mcp-server-replicate#readme"
+Issues = "https://github.com/gerred/mcp-server-replicate/issues"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
