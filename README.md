@@ -85,9 +85,8 @@ code %APPDATA%\Claude\claude_desktop_config.json
 {
   "mcpServers": {
     "replicate": {
-      // Option 1: Using UVX (recommended)
       "command": "uvx",
-      "args": ["run", "mcp-server-replicate"]
+      "args": ["mcp-server-replicate"]
     }
   }
 }
@@ -99,13 +98,14 @@ OR
 {
   "mcpServers": {
     "replicate": {
-      // Option 2: Using UV
       "command": "uv",
-      "args": ["run", "python", "-m", "mcp_server_replicate"]
+      "args": ["run", "mcp-server-replicate"]
     }
   }
 }
 ```
+
+Note: The first option uses UVX (recommended), while the second option uses UV directly.
 
 4. Set your Replicate API key:
 
@@ -181,7 +181,7 @@ For more detailed troubleshooting, see our [Debugging Guide](docs/debugging.md).
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/cursor-ai/mcp-server-replicate.git
+git clone https://github.com/gerred/mcp-server-replicate.git
 cd mcp-server-replicate
 ```
 
