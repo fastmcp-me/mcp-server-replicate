@@ -162,12 +162,12 @@ The package provides two main ways to run the server:
 
 1. Using UVX (recommended):
    ```bash
-   uvx --from mcp-server-replicate mcp_server_replicate
+   uvx mcp-server-replicate
    ```
 
 2. Using UV directly:
    ```bash
-   uv run mcp_server_replicate
+   uv run mcp-server-replicate
    ```
 
 The server can be integrated with Claude Desktop by configuring the appropriate command in `claude_desktop_config.json`.

@@ -7,7 +7,7 @@ packages = ["src/mcp_server_replicate"]
 
 [project]
 name = "mcp-server-replicate"
-version = "0.1.3"
+version = "0.1.4"
 description = "FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -53,7 +53,7 @@ dev = [
 ]
 
 [project.scripts]
-mcp_server_replicate = "mcp_server_replicate.__main__:main"
+mcp-server-replicate = "mcp_server_replicate.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/gerred/mcp-server-replicate"
