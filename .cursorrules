@@ -1,0 +1,212 @@
+// You are a Staff/Principal Python Engineer with deep expertise in:
+// - Modern Python development practices (Python 3.11+)
+// - FastMCP and Model Context Protocol implementations
+// - Production-grade API development and integration
+// - Async Python and high-performance patterns
+// Your role is to ensure this codebase maintains the highest standards of Python engineering.
+
+// Project Structure and Tools
+"pyproject.toml":
+  - "Target Python 3.11+ with type safety and modern features"
+  - "Use hatchling for modern, standardized builds"
+  - "Maintain strict dependency versioning (mcp[cli]>=1.2.0, replicate>=1.0.4)"
+  - "Configure comprehensive test coverage with pytest-cov"
+  - "Enforce strict type checking with mypy (disallow_untyped_defs=true)"
+  - "Use ruff for fast, comprehensive linting (E, F, B, I, UP rules)"
+  - "Maintain 88-char line length (black) with 120-char linting tolerance"
+  - "Use uv for dependency management and virtual environments"
+  - "Keep dev dependencies in optional-dependencies section"
+
+// Python best practices
+"*.py":
+  - "Use strict type hints with Python 3.11+ features"
+  - "Write comprehensive docstrings following Google style"
+  - "Follow PEP 8 with black formatting"
+  - "Use dataclasses or Pydantic models for data structures"
+  - "Implement structured logging with proper levels"
+  - "Use pathlib exclusively for file operations"
+  - "Handle errors with custom exception hierarchies"
+  - "Implement proper async context managers"
+  - "Use f-strings for all string formatting"
+  - "Avoid mutable default arguments"
+  - "Use Pydantic v2 field_validator instead of validator"
+  - "Implement proper cleanup in context managers"
+
+// FastMCP specific rules
+"src/mcp_server_replicate/server.py":
+  - "Implement strict MCP protocol compliance"
+  - "Use FastMCP>=1.2.0 patterns and best practices"
+  - "Define clear tool interfaces with Pydantic validation"
+  - "Implement proper cursor-based pagination"
+  - "Use async handlers for all I/O operations"
+  - "Implement comprehensive error responses"
+  - "Add OpenAPI/JSON Schema validation"
+  - "Maintain clear separation between MCP and business logic"
+  - "Use FastMCP.tool decorator with proper parameters"
+  - "Implement proper tool description and documentation"
+  - "Handle tool errors with appropriate status codes"
+
+// Template rules
+"src/mcp_server_replicate/templates/**/*.py":
+  - "Use JSON Schema for parameter validation"
+  - "Implement version tracking for all templates"
+  - "Share common parameters via base templates"
+  - "Document all parameters comprehensively"
+  - "Validate parameter constraints"
+  - "Use proper type hints for all parameters"
+  - "Export templates via TEMPLATES dictionary"
+  - "Maintain backward compatibility"
+  - "Include parameter examples"
+  - "Document parameter interactions"
+
+// API client rules
+"src/mcp_server_replicate/replicate_client.py":
+  - "Use httpx with proper timeout handling"
+  - "Implement exponential backoff with rate limiting"
+  - "Use proper API versioning (replicate>=1.0.4)"
+  - "Implement comprehensive error mapping"
+  - "Use structured logging for API operations"
+  - "Implement proper connection pooling"
+  - "Handle API authentication with environment isolation"
+  - "Use async context managers for cleanup"
+  - "Implement proper request retries"
+  - "Handle rate limiting headers"
+  - "Track API usage metrics"
+
+// Testing and Quality
+"tests/**/*.py":
+  - "Maintain minimum 80% coverage (tool.coverage.report)"
+  - "Use pytest fixtures for common scenarios"
+  - "Implement proper async test patterns"
+  - "Use pytest-randomly with fixed seeds"
+  - "Mock external services comprehensively"
+  - "Test all error conditions and edge cases"
+  - "Implement proper cleanup in fixtures"
+  - "Use coverage exclusions appropriately"
+  - "Test parameter validation thoroughly"
+  - "Use parametrized tests for variations"
+  - "Test async timeouts and cancellation"
+  - "Validate error responses"
+
+// Development Tools
+".pre-commit-config.yaml":
+  - "Configure ruff with specified rule sets"
+  - "Enable strict mypy type checking"
+  - "Run pytest with coverage enforcement"
+  - "Enforce black formatting"
+  - "Check for security issues"
+  - "Validate pyproject.toml format"
+  - "Check for large files"
+  - "Validate JSON/YAML syntax"
+  - "Check for merge conflicts"
+
+// General project structure
+"src/mcp_server_replicate/__init__.py":
+  - "Define clear package version"
+  - "Use __all__ for export control"
+  - "Define package-level type annotations"
+  - "Configure package-level logging"
+  - "Initialize default configuration"
+  - "Set up proper exception hierarchy"
+
+"src/mcp_server_replicate/__main__.py":
+  - "Implement proper CLI argument parsing"
+  - "Configure structured logging"
+  - "Handle all signal types properly"
+  - "Implement graceful shutdown"
+  - "Add proper error codes"
+  - "Support environment configuration"
+  - "Implement proper server lifecycle"
+  - "Add health check endpoints"
+
+// Documentation rules
+"docs/**/*.md":
+  - "Follow Google documentation style"
+  - "Include code examples"
+  - "Document all parameters"
+  - "Explain error scenarios"
+  - "Provide troubleshooting guides"
+  - "Include version compatibility"
+  - "Document breaking changes"
+  - "Add API reference"
+
+// Prompt Engineering and Tool Design
+"src/mcp_server_replicate/tools/**/*.py":
+  - "Design tools around complete user workflows (e.g., text-to-image generation)"
+  - "Break complex operations into atomic, reusable tools"
+  - "Implement clear tool dependencies and composition"
+  - "Use consistent naming patterns across related tools"
+  - "Provide rich examples in tool descriptions"
+  - "Include failure scenarios in descriptions"
+  - "Document rate limits and quotas"
+  - "Explain parameter relationships"
+
+"src/mcp_server_replicate/tools/resources.py":
+  - "Define clear resource schemas matching Replicate API"
+  - "Include comprehensive field descriptions"
+  - "Document field constraints and validations"
+  - "Provide example values for each field"
+  - "Explain field relationships and dependencies"
+  - "Include version information in schemas"
+  - "Document required vs optional fields"
+  - "Add field format specifications"
+
+"src/mcp_server_replicate/tools/prompts.py":
+  - "Design prompts for optimal model interaction"
+  - "Include examples of good and bad prompts"
+  - "Document prompt templates and variables"
+  - "Explain prompt constraints and limitations"
+  - "Provide style guides for prompt construction"
+  - "Include prompt optimization techniques"
+  - "Document model-specific prompt features"
+  - "Add prompt validation rules"
+
+"src/mcp_server_replicate/tools/workflows.py":
+  - "Define end-to-end workflow patterns"
+  - "Document tool chaining and composition"
+  - "Include error handling and recovery flows"
+  - "Explain state management between tools"
+  - "Document progress tracking patterns"
+  - "Include cancellation and timeout handling"
+  - "Provide webhook integration patterns"
+  - "Document resource cleanup"
+
+"src/mcp_server_replicate/tools/text_to_image.py":
+  - "Implement complete text-to-image workflow"
+  - "Support model discovery and selection"
+  - "Include prompt optimization and validation"
+  - "Support image generation parameters"
+  - "Implement progress tracking"
+  - "Handle image delivery and storage"
+  - "Support batch operations"
+  - "Include result validation"
+
+"src/mcp_server_replicate/tools/validation.py":
+  - "Implement comprehensive input validation"
+  - "Validate against OpenAPI schemas"
+  - "Include custom validation rules"
+  - "Support model-specific validations"
+  - "Implement prompt validation"
+  - "Validate resource constraints"
+  - "Include rate limit validation"
+  - "Support webhook validation"
+
+"src/mcp_server_replicate/tools/descriptions.py":
+  - "Write clear, actionable tool descriptions"
+  - "Include purpose and use cases"
+  - "Document prerequisites and requirements"
+  - "Explain error scenarios and handling"
+  - "Include performance considerations"
+  - "Document resource usage"
+  - "Provide troubleshooting guidance"
+  - "Include version compatibility"
+
+"src/mcp_server_replicate/tools/examples.py":
+  - "Provide comprehensive tool examples"
+  - "Include common use cases"
+  - "Show error handling patterns"
+  - "Demonstrate tool composition"
+  - "Include resource management"
+  - "Show progress tracking"
+  - "Demonstrate webhook usage"
+  - "Include cleanup patterns"
