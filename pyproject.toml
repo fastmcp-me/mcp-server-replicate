@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-packages = ["src"]
+packages = ["src/mcp_server_replicate"]
 
 [project]
 name = "mcp-server-replicate"
-version = "0.1.6"
+version = "0.1.8"
 description = "FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference"
 readme = "README.md"
 requires-python = ">=3.11"

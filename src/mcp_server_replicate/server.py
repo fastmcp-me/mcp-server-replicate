@@ -1,62 +1,65 @@
 """FastMCP server implementation for Replicate API."""
 
-import os
+import asyncio
+import base64
+import hashlib
+import hmac
 import json
 import logging
-import hmac
-import hashlib
-import base64
-import subprocess
-from typing import Any, Dict, List, Optional, Union, Sequence, Tuple, Set
-from pathlib import Path
-import asyncio
-import httpx
-import tempfile
+import os
 import webbrowser
+from collections.abc import Sequence
+from typing import Any
 
+import httpx
+import jsonschema
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import Message, TextContent, UserMessage
 from mcp.server.session import ServerSession
 from mcp.types import (
-    AnyUrl, EmbeddedResource, BlobResourceContents, TextResourceContents,
-    SubscribeRequest, UnsubscribeRequest, EmptyResult, ResourceUpdatedNotification,
-    ResourceListChangedNotification
+    AnyUrl,
+    BlobResourceContents,
+    EmptyResult,
+    ResourceUpdatedNotification,
+    TextResourceContents,
 )
 from pydantic import BaseModel, Field, field_validator
-import jsonschema
 
-from .templates.parameters.common_configs import QUALITY_PRESETS, STYLE_PRESETS
-from .replicate_client import ReplicateClient
-from .models.model import Model, ModelList
 from .models.collection import Collection, CollectionList
 from .models.hardware import Hardware, HardwareList
-from .models.webhook import WebhookEvent, WebhookPayload
+from .models.model import Model, ModelList
+from .models.webhook import WebhookPayload
+from .replicate_client import ReplicateClient
+from .templates.parameters.common_configs import QUALITY_PRESETS, STYLE_PRESETS, TEMPLATES
 
 logger = logging.getLogger(__name__)
 
+
 class SubscriptionRequest(BaseModel):
     """Request model for subscription operations."""
+
     uri: str = Field(..., description="Resource URI to subscribe to")
     session_id: str = Field(..., description="ID of the session making the request")
 
+
 class GenerationSubscriptionManager:
     """Manages subscriptions to generation resources."""
-    
+
     def __init__(self):
-        self._subscriptions: Dict[str, Set[ServerSession]] = {}
-        self._check_task: Optional[asyncio.Task] = None
-        
+        self._subscriptions: dict[str, set[ServerSession]] = {}
+        self._check_task: asyncio.Task | None = None
+
     async def subscribe(self, uri: str, session: ServerSession):
         """Subscribe a session to generation updates."""
         prediction_id = uri.replace("generations://", "")
         if prediction_id not in self._subscriptions:
             self._subscriptions[prediction_id] = set()
         self._subscriptions[prediction_id].add(session)
-        
+
         # Start checking if not already running
         if not self._check_task:
             self._check_task = asyncio.create_task(self._check_generations())
-            
+
     async def unsubscribe(self, uri: str, session: ServerSession):
         """Unsubscribe a session from generation updates."""
         prediction_id = uri.replace("generations://", "")
@@ -64,12 +67,12 @@ class GenerationSubscriptionManager:
             self._subscriptions[prediction_id].discard(session)
             if not self._subscriptions[prediction_id]:
                 del self._subscriptions[prediction_id]
-                
+
         # Stop checking if no more subscriptions
         if not self._subscriptions and self._check_task:
             self._check_task.cancel()
             self._check_task = None
-            
+
     async def _check_generations(self):
         """Periodically check subscribed generations and notify of updates."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
@@ -83,35 +86,40 @@ class GenerationSubscriptionManager:
                                 # For succeeded generations with image output
                                 if result["status"] == "succeeded" and result.get("output"):
                                     # For image generation models, output is typically a list with the image URL as first item
-                                    image_url = result["output"][0] if isinstance(result["output"], list) else result["output"]
-                                    
+                                    image_url = (
+                                        result["output"][0] if isinstance(result["output"], list) else result["output"]
+                                    )
+
                                     # First send a notification with just the URL and metadata
                                     notification = ResourceUpdatedNotification(
                                         method="notifications/resources/updated",
-                                        params={"uri": f"generations://{prediction_id}"}
+                                        params={"uri": f"generations://{prediction_id}"},
                                     )
-                                    
+
                                     # Create text resource with metadata and URL
                                     text_resource = TextResourceContents(
                                         type="text",
                                         uri=f"generations://{prediction_id}",
                                         mimeType="application/json",
-                                        text=json.dumps({
-                                            "status": "succeeded",
-                                            "image_url": image_url,
-                                            "created_at": result.get("created_at"),
-                                            "completed_at": result.get("completed_at"),
-                                            "metrics": result.get("metrics", {}),
-                                            "urls": result.get("urls", {}),
-                                            "input": result.get("input", {})
-                                        }, indent=2)
+                                        text=json.dumps(
+                                            {
+                                                "status": "succeeded",
+                                                "image_url": image_url,
+                                                "created_at": result.get("created_at"),
+                                                "completed_at": result.get("completed_at"),
+                                                "metrics": result.get("metrics", {}),
+                                                "urls": result.get("urls", {}),
+                                                "input": result.get("input", {}),
+                                            },
+                                            indent=2,
+                                        ),
                                     )
-                                    
+
                                     # Send notification and text resource to all sessions
                                     for session in sessions:
                                         await session.send_notification(notification)
                                         await session.send_resource(text_resource)
-                                    
+
                                     # Remove from subscriptions since we've notified
                                     del self._subscriptions[prediction_id]
                                 else:
@@ -119,20 +127,23 @@ class GenerationSubscriptionManager:
                                     resource = TextResourceContents(
                                         uri=f"generations://{prediction_id}",
                                         mimeType="application/json",
-                                        text=json.dumps({
-                                            "status": result["status"],
-                                            "error": result.get("error"),
-                                            "created_at": result.get("created_at"),
-                                            "completed_at": result.get("completed_at"),
-                                            "metrics": result.get("metrics", {}),
-                                            "urls": result.get("urls", {})
-                                        }, indent=2)
+                                        text=json.dumps(
+                                            {
+                                                "status": result["status"],
+                                                "error": result.get("error"),
+                                                "created_at": result.get("created_at"),
+                                                "completed_at": result.get("completed_at"),
+                                                "metrics": result.get("metrics", {}),
+                                                "urls": result.get("urls", {}),
+                                            },
+                                            indent=2,
+                                        ),
                                     )
 
                                 # Send notification with the resource
                                 notification = ResourceUpdatedNotification(
                                     method="notifications/resources/updated",
-                                    params={"uri": AnyUrl(f"generations://{prediction_id}")}
+                                    params={"uri": AnyUrl(f"generations://{prediction_id}")},
                                 )
                                 for session in sessions:
                                     await session.send_notification(notification)
@@ -143,10 +154,10 @@ class GenerationSubscriptionManager:
                                 del self._subscriptions[prediction_id]
                         except Exception as e:
                             logger.error(f"Error checking generation {prediction_id}: {e}")
-                            
+
                     if not self._subscriptions:
                         break
-                        
+
                     await asyncio.sleep(2.0)  # Poll every 2 seconds
                 except asyncio.CancelledError:
                     break
@@ -154,18 +165,19 @@ class GenerationSubscriptionManager:
                     logger.error(f"Error in generation check loop: {e}")
                     await asyncio.sleep(5.0)  # Back off on errors
 
+
 async def select_model_for_task(
     task: str,
-    style: Optional[str] = None,
+    style: str | None = None,
     quality: str = "balanced",
-) -> Tuple[Model, Dict[str, Any]]:
+) -> tuple[Model, dict[str, Any]]:
     """Select the best model for a given task and get optimal parameters.
-    
+
     Args:
         task: Task description/prompt
         style: Optional style preference
         quality: Quality preset (draft, balanced, quality, extreme)
-        
+
     Returns:
         Tuple of (selected model, optimized parameters)
     """
@@ -173,126 +185,126 @@ async def select_model_for_task(
     search_query = task
     if style:
         search_query = f"{style} style {search_query}"
-        
+
     # Search for models
     async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
         result = await client.search_models(search_query)
-        
+
         if not result["models"]:
             raise ValueError("No suitable models found for the task")
-            
+
         # Score and rank models
         scored_models = []
         for model in result["models"]:
             score = 0
-            
+
             # Popularity score (0-50)
             run_count = model.get("run_count", 0)
             score += min(50, (run_count / 1000) * 50)
-            
+
             # Featured bonus
             if model.get("featured"):
                 score += 20
-                
+
             # Version stability
             if model.get("latest_version"):
                 score += 10
-            
+
             # Tag matching
             tags = model.get("tags", [])
             if style and any(style.lower() in tag.lower() for tag in tags):
                 score += 15
             if "image" in tags or "text-to-image" in tags:
                 score += 15
-                
+
             scored_models.append((model, score))
-            
+
         # Sort by score
         scored_models.sort(key=lambda x: x[1], reverse=True)
         selected_model = scored_models[0][0]
-        
+
         # Get quality preset
         quality_preset = TEMPLATES["quality-presets"]["presets"].get(
-            quality,
-            TEMPLATES["quality-presets"]["presets"]["balanced"]
+            quality, TEMPLATES["quality-presets"]["presets"]["balanced"]
         )
-        
+
         # Get style preset if specified
         parameters = quality_preset["parameters"].copy()
         if style:
             style_preset = TEMPLATES["style-presets"]["presets"].get(
-                style.lower(),
-                TEMPLATES["style-presets"]["presets"].get("photorealistic")
+                style.lower(), TEMPLATES["style-presets"]["presets"].get("photorealistic")
             )
             if style_preset:
                 parameters.update(style_preset["parameters"])
-                
+
         return Model(**selected_model), parameters
+
 
 class TemplateInput(BaseModel):
     """Input for template-based operations."""
-    
+
     template: str = Field(..., description="Template identifier")
-    parameters: Dict[str, Any] = Field(default_factory=dict, description="Template parameters")
-    
+    parameters: dict[str, Any] = Field(default_factory=dict, description="Template parameters")
+
     @field_validator("template")
     def validate_template(cls, v: str) -> str:
         """Validate template identifier."""
         if v not in TEMPLATES:
             raise ValueError(f"Unknown template: {v}")
         return v
-    
+
     @field_validator("parameters")
-    def validate_parameters(cls, v: Dict[str, Any], values: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_parameters(cls, v: dict[str, Any], values: dict[str, Any]) -> dict[str, Any]:
         """Validate template parameters."""
         if "template" not in values:
             return v
-        
+
         template = TEMPLATES[values["template"]]
         try:
             jsonschema.validate(v, template["parameter_schema"])
         except jsonschema.exceptions.ValidationError as e:
-            raise ValueError(f"Invalid parameters: {e.message}")
+            raise ValueError(f"Invalid parameters: {e.message}") from e
         return v
+
 
 class PredictionInput(BaseModel):
     """Input for prediction operations."""
-    
+
     version: str = Field(..., description="Model version ID")
-    input: Dict[str, Any] = Field(..., description="Model input parameters")
-    webhook: Optional[str] = Field(None, description="Webhook URL for prediction updates")
-    
+    input: dict[str, Any] = Field(..., description="Model input parameters")
+    webhook: str | None = Field(None, description="Webhook URL for prediction updates")
+
     @field_validator("input")
-    def validate_input(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_input(cls, v: dict[str, Any]) -> dict[str, Any]:
         """Validate prediction input."""
         if not isinstance(v, dict):
             raise ValueError("Input must be a dictionary")
         return v
 
+
 def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
     """Create and configure the FastMCP server.
-    
+
     Args:
         log_level: The logging level to use. Defaults to WARNING.
-        
+
     Returns:
         Configured FastMCP server instance.
     """
     # Configure logging
     logging.basicConfig(level=log_level)
     logger.setLevel(log_level)
-    
+
     # Verify API token is available
     api_token = os.getenv("REPLICATE_API_TOKEN")
     if not api_token:
         raise ValueError(
-            "REPLICATE_API_TOKEN environment variable is required. "
-            "Get your token from https://replicate.com/account"
+            "REPLICATE_API_TOKEN environment variable is required. " "Get your token from https://replicate.com/account"
         )
-    
+
     # Create server instance
     mcp = FastMCP("Replicate Server")
-    
+
     # Add resources
     @mcp.resource("templates://list")
     def list_available_templates() -> str:
@@ -312,7 +324,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
         """Get detailed information about a specific template."""
         if name not in TEMPLATES:
             raise ValueError(f"Template not found: {name}")
-        
+
         template = TEMPLATES[name]
         return json.dumps(
             {
@@ -322,46 +334,50 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 "parameter_schema": template["parameter_schema"],
                 "examples": template.get("examples", []),
             },
-            indent=2
+            indent=2,
         )
 
     @mcp.resource("generations://{prediction_id}")
-    async def get_generation(prediction_id: str) -> Union[TextResourceContents, BlobResourceContents]:
+    async def get_generation(prediction_id: str) -> TextResourceContents | BlobResourceContents:
         """Get a specific image generation result."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.get_prediction_status(prediction_id)
-            
+
             # If not succeeded, return status info
             if result["status"] != "succeeded":
                 return TextResourceContents(
                     uri=f"generations://{prediction_id}",
                     mimeType="application/json",
-                    text=json.dumps({
-                        "status": result["status"],
-                        "created_at": result.get("created_at"),
-                        "started_at": result.get("started_at"),
-                        "completed_at": result.get("completed_at"),
-                        "error": result.get("error"),
-                        "logs": result.get("logs"),
-                        "urls": result.get("urls", {}),
-                        "metrics": result.get("metrics", {})
-                    })
+                    text=json.dumps(
+                        {
+                            "status": result["status"],
+                            "created_at": result.get("created_at"),
+                            "started_at": result.get("started_at"),
+                            "completed_at": result.get("completed_at"),
+                            "error": result.get("error"),
+                            "logs": result.get("logs"),
+                            "urls": result.get("urls", {}),
+                            "metrics": result.get("metrics", {}),
+                        }
+                    ),
                 )
-            
+
             # For succeeded generations, return image URL and metadata
             image_url = result["output"][0] if isinstance(result["output"], list) else result["output"]
             return TextResourceContents(
                 uri=f"generations://{prediction_id}",
                 mimeType="application/json",
-                text=json.dumps({
-                    "status": "succeeded",
-                    "image_url": image_url,
-                    "created_at": result.get("created_at"),
-                    "completed_at": result.get("completed_at"),
-                    "metrics": result.get("metrics", {}),
-                    "urls": result.get("urls", {}),
-                    "input": result.get("input", {})
-                })
+                text=json.dumps(
+                    {
+                        "status": "succeeded",
+                        "image_url": image_url,
+                        "created_at": result.get("created_at"),
+                        "completed_at": result.get("completed_at"),
+                        "metrics": result.get("metrics", {}),
+                        "urls": result.get("urls", {}),
+                        "input": result.get("input", {}),
+                    }
+                ),
             )
 
     @mcp.resource("generations://list")
@@ -372,25 +388,28 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
             return TextResourceContents(
                 uri="generations://list",
                 mimeType="application/json",
-                text=json.dumps({
-                    "total_count": len(predictions),
-                    "generations": [
-                        {
-                            "id": p["id"],
-                            "status": p["status"],
-                            "created_at": p.get("created_at"),
-                            "completed_at": p.get("completed_at"),
-                            "prompt": p.get("input", {}).get("prompt"),  # Extract prompt for easy reference
-                            "style": p.get("input", {}).get("style"),    # Extract style for filtering
-                            "quality": p.get("input", {}).get("quality", "balanced"),
-                            "error": p.get("error"),
-                            "resource_uri": f"generations://{p['id']}",
-                            "metrics": p.get("metrics", {}),  # Include performance metrics
-                            "urls": p.get("urls", {})  # Include direct URLs
-                        }
-                        for p in predictions
-                    ]
-                }, indent=2)
+                text=json.dumps(
+                    {
+                        "total_count": len(predictions),
+                        "generations": [
+                            {
+                                "id": p["id"],
+                                "status": p["status"],
+                                "created_at": p.get("created_at"),
+                                "completed_at": p.get("completed_at"),
+                                "prompt": p.get("input", {}).get("prompt"),  # Extract prompt for easy reference
+                                "style": p.get("input", {}).get("style"),  # Extract style for filtering
+                                "quality": p.get("input", {}).get("quality", "balanced"),
+                                "error": p.get("error"),
+                                "resource_uri": f"generations://{p['id']}",
+                                "metrics": p.get("metrics", {}),  # Include performance metrics
+                                "urls": p.get("urls", {}),  # Include direct URLs
+                            }
+                            for p in predictions
+                        ],
+                    },
+                    indent=2,
+                ),
             )
 
     @mcp.resource("generations://search/{query}")
@@ -403,33 +422,38 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
             query_lower = query.lower()
             for p in predictions:
                 input_data = p.get("input", {})
-                searchable_text = f"{input_data.get('prompt', '')} {input_data.get('style', '')} {input_data.get('quality', '')}"
+                searchable_text = (
+                    f"{input_data.get('prompt', '')} {input_data.get('style', '')} {input_data.get('quality', '')}"
+                )
                 if query_lower in searchable_text.lower():
                     filtered.append(p)
-                    
+
             return TextResourceContents(
                 uri=f"generations://search/{query}",
                 mimeType="application/json",
-                text=json.dumps({
-                    "query": query,
-                    "total_count": len(filtered),
-                    "generations": [
-                        {
-                            "id": p["id"],
-                            "status": p["status"],
-                            "created_at": p.get("created_at"),
-                            "completed_at": p.get("completed_at"),
-                            "prompt": p.get("input", {}).get("prompt"),
-                            "style": p.get("input", {}).get("style"),
-                            "quality": p.get("input", {}).get("quality", "balanced"),
-                            "error": p.get("error"),
-                            "resource_uri": f"generations://{p['id']}",
-                            "metrics": p.get("metrics", {}),
-                            "urls": p.get("urls", {})
-                        }
-                        for p in filtered
-                    ]
-                }, indent=2)
+                text=json.dumps(
+                    {
+                        "query": query,
+                        "total_count": len(filtered),
+                        "generations": [
+                            {
+                                "id": p["id"],
+                                "status": p["status"],
+                                "created_at": p.get("created_at"),
+                                "completed_at": p.get("completed_at"),
+                                "prompt": p.get("input", {}).get("prompt"),
+                                "style": p.get("input", {}).get("style"),
+                                "quality": p.get("input", {}).get("quality", "balanced"),
+                                "error": p.get("error"),
+                                "resource_uri": f"generations://{p['id']}",
+                                "metrics": p.get("metrics", {}),
+                                "urls": p.get("urls", {}),
+                            }
+                            for p in filtered
+                        ],
+                    },
+                    indent=2,
+                ),
             )
 
     @mcp.resource("generations://status/{status}")
@@ -440,25 +464,28 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
             return TextResourceContents(
                 uri=f"generations://status/{status}",
                 mimeType="application/json",
-                text=json.dumps({
-                    "status": status,
-                    "total_count": len(predictions),
-                    "generations": [
-                        {
-                            "id": p["id"],
-                            "created_at": p.get("created_at"),
-                            "completed_at": p.get("completed_at"),
-                            "prompt": p.get("input", {}).get("prompt"),
-                            "style": p.get("input", {}).get("style"),
-                            "quality": p.get("input", {}).get("quality", "balanced"),
-                            "error": p.get("error"),
-                            "resource_uri": f"generations://{p['id']}",
-                            "metrics": p.get("metrics", {}),
-                            "urls": p.get("urls", {})
-                        }
-                        for p in predictions
-                    ]
-                }, indent=2)
+                text=json.dumps(
+                    {
+                        "status": status,
+                        "total_count": len(predictions),
+                        "generations": [
+                            {
+                                "id": p["id"],
+                                "created_at": p.get("created_at"),
+                                "completed_at": p.get("completed_at"),
+                                "prompt": p.get("input", {}).get("prompt"),
+                                "style": p.get("input", {}).get("style"),
+                                "quality": p.get("input", {}).get("quality", "balanced"),
+                                "error": p.get("error"),
+                                "resource_uri": f"generations://{p['id']}",
+                                "metrics": p.get("metrics", {}),
+                                "urls": p.get("urls", {}),
+                            }
+                            for p in predictions
+                        ],
+                    },
+                    indent=2,
+                ),
             )
 
     @mcp.resource("models://popular")
@@ -471,7 +498,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                     "models": models["models"],
                     "total": models.get("total_models", 0),
                 },
-                indent=2
+                indent=2,
             )
 
     # Add prompts
@@ -496,7 +523,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                         "- You can wait for completion or start another generation\n"
                         "- When ready, I can show you the image or open it on your system\n"
                         "- You can also browse, search, or manage your generations"
-                    )
+                    ),
                 )
             )
         ]
@@ -515,13 +542,13 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                         "2. The type of transformation you want (e.g., style transfer, upscaling, inpainting)\n"
                         "3. Any specific settings or parameters\n\n"
                         "I'll help you choose the right model and format your request."
-                    )
+                    ),
                 )
             )
         ]
 
     @mcp.prompt()
-    def model_selection(task: Optional[str] = None) -> Sequence[Message]:
+    def model_selection(task: str | None = None) -> Sequence[Message]:
         """Help choose the right model for a specific task."""
         base_prompt = (
             "I'll help you select the best Replicate model for your needs. "
@@ -531,7 +558,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
             "3. Any specific quality or performance requirements\n"
             "4. Any budget or hardware constraints\n\n"
         )
-        
+
         if task:
             base_prompt += f"\nFor {task}, I recommend considering these aspects:\n"
             if "image" in task.lower():
@@ -542,36 +569,27 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 )
             elif "text" in task.lower():
                 base_prompt += (
-                    "- Input length considerations\n"
-                    "- Output format requirements\n"
-                    "- Specific language needs\n"
+                    "- Input length considerations\n" "- Output format requirements\n" "- Specific language needs\n"
                 )
-                
-        return [
-            UserMessage(
-                content=TextContent(
-                    type="text",
-                    text=base_prompt
-                )
-            )
-        ]
+
+        return [UserMessage(content=TextContent(type="text", text=base_prompt))]
 
     @mcp.prompt()
-    def parameter_help(template: Optional[str] = None) -> Sequence[Message]:
+    def parameter_help(template: str | None = None) -> Sequence[Message]:
         """Get help with model parameters and templates."""
         if template and template in TEMPLATES:
             tmpl = TEMPLATES[template]
             text = (
                 f"I'll help you with the {template} template.\n\n"
                 f"Description: {tmpl.get('description', 'No description')}\n"
-                "Required Parameters:\n" +
-                "\n".join(
+                "Required Parameters:\n"
+                + "\n".join(
                     f"- {param}: {schema.get('description', 'No description')}"
                     for param, schema in tmpl["parameter_schema"]["properties"].items()
                     if param in tmpl["parameter_schema"].get("required", [])
-                ) +
-                "\n\nOptional Parameters:\n" +
-                "\n".join(
+                )
+                + "\n\nOptional Parameters:\n"
+                + "\n".join(
                     f"- {param}: {schema.get('description', 'No description')}"
                     for param, schema in tmpl["parameter_schema"]["properties"].items()
                     if param not in tmpl["parameter_schema"].get("required", [])
@@ -586,15 +604,8 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 "3. Your use case or requirements\n\n"
                 "I'll explain the parameters and suggest appropriate values."
             )
-        
-        return [
-            UserMessage(
-                content=TextContent(
-                    type="text",
-                    text=text
-                )
-            )
-        ]
+
+        return [UserMessage(content=TextContent(type="text", text=text))]
 
     @mcp.prompt()
     def after_generation() -> Sequence[Message]:
@@ -614,39 +625,37 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                         "- Save it or share it\n"
                         "- Create variations or apply transformations\n\n"
                         "What would you like to do?"
-                    )
+                    ),
                 )
             )
         ]
 
     # Model Discovery Tools
     @mcp.tool()
-    async def list_models(owner: Optional[str] = None) -> ModelList:
+    async def list_models(owner: str | None = None) -> ModelList:
         """List available models on Replicate with optional filtering by owner."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.list_models(owner=owner)
             return ModelList(
                 models=[Model(**model) for model in result["models"]],
                 next_cursor=result.get("next_cursor"),
-                total_count=result.get("total_models")
+                total_count=result.get("total_models"),
             )
-    
+
     @mcp.tool()
     async def search_models(query: str) -> ModelList:
         """Search for models using semantic search."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.search_models(query)
             models = [Model(**model) for model in result["models"]]
-            
+
             # Sort by run count as a proxy for popularity/reliability
             models.sort(key=lambda m: m.run_count if m.run_count else 0, reverse=True)
-            
+
             return ModelList(
-                models=models,
-                next_cursor=result.get("next_cursor"),
-                total_count=result.get("total_models")
+                models=models, next_cursor=result.get("next_cursor"), total_count=result.get("total_models")
             )
-    
+
     # Collection Management Tools
     @mcp.tool()
     async def list_collections() -> CollectionList:
@@ -654,14 +663,14 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.list_collections()
             return CollectionList(collections=[Collection(**collection) for collection in result])
-    
+
     @mcp.tool()
     async def get_collection_details(collection_slug: str) -> Collection:
         """Get detailed information about a specific collection."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.get_collection(collection_slug)
             return Collection(**result)
-    
+
     # Hardware Tools
     @mcp.tool()
     async def list_hardware() -> HardwareList:
@@ -669,35 +678,35 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.list_hardware()
             return HardwareList(hardware=[Hardware(**hw) for hw in result])
-    
+
     # Template Tools
     @mcp.tool()
-    def list_templates() -> Dict[str, Any]:
+    def list_templates() -> dict[str, Any]:
         """List all available templates with their schemas."""
         return {
             name: {
                 "schema": template["parameter_schema"],
                 "description": template.get("description", ""),
-                "version": template.get("version", "1.0.0")
+                "version": template.get("version", "1.0.0"),
             }
             for name, template in TEMPLATES.items()
         }
-    
+
     @mcp.tool()
-    def validate_template_parameters(input: Dict[str, Any]) -> bool:
+    def validate_template_parameters(input: dict[str, Any]) -> bool:
         """Validate parameters against a template schema."""
         template_input = TemplateInput(**input)
         return True  # If we get here, validation passed
-    
+
     # Prediction Tools
     @mcp.tool()
-    async def create_prediction(input: Dict[str, Any], confirmed: bool = False) -> Dict[str, Any]:
+    async def create_prediction(input: dict[str, Any], confirmed: bool = False) -> dict[str, Any]:
         """Create a new prediction using a specific model version on Replicate.
-        
+
         Args:
             input: Model input parameters including version or model details
             confirmed: Whether the user has explicitly confirmed the generation
-            
+
         Returns:
             Prediction details if confirmed, or a confirmation request if not
         """
@@ -709,7 +718,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 model_info = f"version: {input['version']}"
             elif "model_owner" in input and "model_name" in input:
                 model_info = f"model: {input['model_owner']}/{input['model_name']}"
-                
+
             return {
                 "requires_confirmation": True,
                 "message": (
@@ -718,7 +727,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                     f"Prompt: {input.get('prompt', 'Not specified')}\n"
                     f"Quality: {input.get('quality', 'balanced')}\n\n"
                     "Please confirm if you want to proceed with the generation."
-                )
+                ),
             }
 
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
@@ -739,23 +748,19 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 raise ValueError("Must provide either 'version' or both 'model_owner' and 'model_name'")
 
             # Create prediction with remaining parameters as input
-            result = await client.create_prediction(
-                version=version,
-                input=input,
-                webhook=input.pop("webhook", None)
-            )
+            result = await client.create_prediction(version=version, input=input, webhook=input.pop("webhook", None))
 
             # Return result with prompt about waiting
             return {
                 **result,
-                "_next_prompt": "after_generation"  # Signal to show the waiting prompt
+                "_next_prompt": "after_generation",  # Signal to show the waiting prompt
             }
-    
+
     @mcp.tool()
-    async def get_prediction(prediction_id: str, wait: bool = False, max_retries: Optional[int] = None) -> Dict[str, Any]:
+    async def get_prediction(prediction_id: str, wait: bool = False, max_retries: int | None = None) -> dict[str, Any]:
         """Get the status and results of a prediction."""
         consecutive_errors = 0
-        
+
         while True:
             try:
                 async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
@@ -764,31 +769,31 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                         headers={
                             "Authorization": f"Bearer {client.api_token}",
                             "Content-Type": "application/json",
-                        }
+                        },
                     )
                     response.raise_for_status()
                     data = response.json()
-                    
+
                     # Build URL message with all available links
                     urls_msg = []
-                    
+
                     # Add streaming URL if available
                     if data.get("urls", {}).get("stream"):
                         urls_msg.append(f"🔄 Stream URL: {data['urls']['stream']}")
-                        
+
                     # Add get URL if available
                     if data.get("urls", {}).get("get"):
                         urls_msg.append(f"📡 Status URL: {data['urls']['get']}")
-                        
+
                     # Add cancel URL if available and still processing
                     if data.get("urls", {}).get("cancel") and data["status"] in ["starting", "processing"]:
                         urls_msg.append(f"🛑 Cancel URL: {data['urls']['cancel']}")
-                    
+
                     # If prediction is complete and has an image output
                     if data["status"] == "succeeded" and data.get("output"):
                         # For image generation models, output is typically a list with the image URL as first item
                         image_url = data["output"][0] if isinstance(data["output"], list) else data["output"]
-                        
+
                         return {
                             "id": data["id"],
                             "status": "succeeded",
@@ -809,9 +814,9 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                                 f"5. Create variations or apply transformations\n\n"
                                 "Would you like me to open the image for you?\n\n"
                                 "Available URLs:\n" + "\n".join(urls_msg)
-                            )
+                            ),
                         }
-                    
+
                     # If prediction failed or was cancelled
                     if data["status"] in ["failed", "canceled"]:
                         error_msg = data.get("error", "No error details available")
@@ -827,9 +832,9 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                             "message": (
                                 f"❌ Generation {data['status']}: {error_msg}\n\n"
                                 "Available URLs:\n" + "\n".join(urls_msg)
-                            )
+                            ),
                         }
-                    
+
                     # If we're still processing and not waiting, return status
                     if not wait:
                         return {
@@ -846,19 +851,19 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                                 "1. Keep waiting (I'll check again)\n"
                                 "2. Use the URLs above to check progress yourself\n"
                                 "3. Cancel the generation if needed"
-                            )
+                            ),
                         }
-                    
+
                     # Reset error count on successful request
                     consecutive_errors = 0
-                    
+
                     # Wait before polling again
                     await asyncio.sleep(2.0)  # Increased poll interval to reduce API load
-                    
+
             except Exception as e:
                 logger.error(f"Error checking prediction status: {str(e)}")
                 consecutive_errors += 1
-                
+
                 # Only stop if we have a max_retries set and exceeded it
                 if max_retries is not None and consecutive_errors >= max_retries:
                     return {
@@ -874,76 +879,72 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                             f"https://replicate.com/p/{prediction_id}\n"
                             "3. Start a new check with a higher retry limit\n\n"
                             f"Last error: {str(e)}"
-                        )
+                        ),
                     }
-                
+
                 # Wait with exponential backoff before retrying
-                await asyncio.sleep(min(30, 2.0 ** consecutive_errors))  # Cap at 30 seconds
-    
+                await asyncio.sleep(min(30, 2.0**consecutive_errors))  # Cap at 30 seconds
+
     @mcp.tool()
-    async def cancel_prediction(prediction_id: str) -> Dict[str, Any]:
+    async def cancel_prediction(prediction_id: str) -> dict[str, Any]:
         """Cancel a running prediction."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             response = await client.cancel_prediction(prediction_id)
             return await response.json()
-    
+
     # Webhook Tools
     @mcp.tool()
     async def get_webhook_secret() -> str:
         """Get the signing secret for verifying webhook requests."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             return await client.get_webhook_secret()
-    
+
     @mcp.tool()
     def verify_webhook(payload: WebhookPayload, signature: str, secret: str) -> bool:
         """Verify that a webhook request came from Replicate using HMAC-SHA256.
-        
+
         Args:
             payload: The webhook payload to verify
             signature: The signature from the X-Replicate-Signature header
             secret: The webhook signing secret from get_webhook_secret
-            
+
         Returns:
             True if signature is valid, False otherwise
         """
         if not signature or not secret:
             return False
-            
+
         # Convert payload to canonical JSON string
         payload_str = json.dumps(payload.model_dump(), sort_keys=True)
-        
+
         # Calculate expected signature
-        expected = hmac.new(
-            secret.encode(),
-            payload_str.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        
+        expected = hmac.new(secret.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
+
         # Compare signatures using constant-time comparison
         return hmac.compare_digest(signature, expected)
-    
+
     @mcp.tool()
     async def search_available_models(
         query: str,
-        style: Optional[str] = None,
+        style: str | None = None,
     ) -> ModelList:
         """Search for available models matching the query.
-        
+
         Args:
             query: Search query describing the desired model
             style: Optional style to filter by
-            
+
         Returns:
             List of matching models with scores
         """
         search_query = query
         if style:
             search_query = f"{style} style {search_query}"
-            
+
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.search_models(search_query)
             models = [Model(**model) for model in result["models"]]
-            
+
             # Score models but don't auto-select
             scored_models = []
             for model in models:
@@ -960,22 +961,22 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 if "image" in tags or "text-to-image" in tags:
                     score += 15
                 scored_models.append((model, score))
-                
+
             # Sort by score but return all for user selection
             scored_models.sort(key=lambda x: x[1], reverse=True)
             return ModelList(
                 models=[m[0] for m in scored_models],
                 next_cursor=result.get("next_cursor"),
-                total_count=result.get("total_count")
+                total_count=result.get("total_count"),
             )
 
     @mcp.tool()
     async def get_model_details(model_id: str) -> Model:
         """Get detailed information about a specific model.
-        
+
         Args:
             model_id: Model identifier in format owner/name
-            
+
         Returns:
             Detailed model information
         """
@@ -986,19 +987,19 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
     @mcp.tool()
     async def generate_image(
         prompt: str,
-        style: Optional[str] = None,
+        style: str | None = None,
         quality: str = "balanced",
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         num_outputs: int = 1,
-        seed: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        seed: int | None = None,
+    ) -> dict[str, Any]:
         """Generate an image using the specified parameters."""
         # Get quality preset parameters
         if quality not in QUALITY_PRESETS["presets"]:
             quality = "balanced"
         parameters = QUALITY_PRESETS["presets"][quality]["parameters"].copy()
-        
+
         # Apply style preset if specified
         if style:
             if style in STYLE_PRESETS["presets"]:
@@ -1010,28 +1011,30 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                 for k, v in style_params.items():
                     if k != "prompt_prefix":
                         parameters[k] = v
-        
+
         # Override size if specified
         if width:
             parameters["width"] = width
         if height:
             parameters["height"] = height
-            
+
         # Add other parameters
-        parameters.update({
-            "prompt": prompt,
-            "num_outputs": num_outputs,
-        })
+        parameters.update(
+            {
+                "prompt": prompt,
+                "num_outputs": num_outputs,
+            }
+        )
         if seed is not None:
             parameters["seed"] = seed
-            
+
         # Create prediction with SDXL model
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.create_prediction(
                 version="39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",  # SDXL v1.0
-                input=parameters
+                input=parameters,
             )
-            
+
             # Return resource information
             return {
                 "resource_uri": f"generations://{result['id']}",
@@ -1054,13 +1057,13 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                     "height": height,
                     "seed": seed,
                     "model": "SDXL v1.0",
-                    "created_at": result.get("created_at")
-                }
+                    "created_at": result.get("created_at"),
+                },
             }
 
     # Initialize subscription manager
     subscription_manager = GenerationSubscriptionManager()
-    
+
     @mcp.tool()
     async def subscribe_to_generation(request: SubscriptionRequest) -> EmptyResult:
         """Handle resource subscription requests."""
@@ -1068,7 +1071,7 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
             session = ServerSession(request.session_id)
             await subscription_manager.subscribe(request.uri, session)
         return EmptyResult()
-        
+
     @mcp.tool()
     async def unsubscribe_from_generation(request: SubscriptionRequest) -> EmptyResult:
         """Handle resource unsubscribe requests."""
@@ -1082,21 +1085,21 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
         """Get the image data for a completed generation."""
         async with ReplicateClient(api_token=os.getenv("REPLICATE_API_TOKEN")) as client:
             result = await client.get_prediction_status(prediction_id)
-            
+
             if result["status"] != "succeeded":
                 raise ValueError(f"Generation not completed: {result['status']}")
-                
+
             if not result.get("output"):
                 raise ValueError("No image output available")
-                
+
             # Get image URL
             image_url = result["output"][0] if isinstance(result["output"], list) else result["output"]
-            
+
             # Download image
             async with httpx.AsyncClient() as http_client:
                 img_response = await http_client.get(image_url)
                 img_response.raise_for_status()
-                
+
                 # Determine mime type from URL extension
                 ext = image_url.split(".")[-1].lower()
                 mime_type = {
@@ -1104,43 +1107,35 @@ def create_server(*, log_level: int = logging.WARNING) -> FastMCP:
                     "jpg": "image/jpeg",
                     "jpeg": "image/jpeg",
                     "gif": "image/gif",
-                    "webp": "image/webp"
+                    "webp": "image/webp",
                 }.get(ext, "image/png")
-                
+
                 # Return blob contents
                 return BlobResourceContents(
                     type="blob",
                     mimeType=mime_type,
                     uri=image_url,
-                    blob=base64.b64encode(img_response.content).decode('ascii'),
-                    description="Generated image data"
+                    blob=base64.b64encode(img_response.content).decode("ascii"),
+                    description="Generated image data",
                 )
 
     @mcp.tool()
-    async def open_image_with_system(image_url: str) -> Dict[str, Any]:
+    async def open_image_with_system(image_url: str) -> dict[str, Any]:
         """Open an image URL with the system's default application.
-        
+
         Args:
             image_url: URL of the image to open
-            
+
         Returns:
             Dict containing status of the operation
         """
         try:
             # Open URL directly with system default
             webbrowser.open(image_url)
-            
-            return {
-                "status": "success",
-                "message": "Image opened with system default application",
-                "url": image_url
-            }
+
+            return {"status": "success", "message": "Image opened with system default application", "url": image_url}
         except Exception as e:
             logger.error(f"Failed to open image: {str(e)}")
-            return {
-                "status": "error",
-                "message": f"Failed to open image: {str(e)}",
-                "url": image_url
-            }
+            return {"status": "error", "message": f"Failed to open image: {str(e)}", "url": image_url}
 
     return mcp
