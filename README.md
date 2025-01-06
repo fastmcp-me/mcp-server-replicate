@@ -86,7 +86,7 @@ code %APPDATA%\Claude\claude_desktop_config.json
   "mcpServers": {
     "replicate": {
       "command": "uvx",
-      "args": ["mcp-server-replicate"]
+      "args": ["--from", "mcp-server-replicate", "mcp_server_replicate"]
     }
   }
 }
@@ -99,7 +99,7 @@ OR
   "mcpServers": {
     "replicate": {
       "command": "uv",
-      "args": ["run", "mcp-server-replicate"]
+      "args": ["run", "mcp_server_replicate"]
     }
   }
 }
