@@ -3,7 +3,7 @@
 import pytest
 from typing import Dict, Any
 
-from mcp_server_replicate.templates.parameters.controlnet import (
+from mcp-server-replicate.templates.parameters.controlnet import (
     TEMPLATES,
     CANNY_PARAMETERS,
     DEPTH_PARAMETERS,

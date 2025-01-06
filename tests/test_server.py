@@ -5,11 +5,11 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from datetime import datetime
 
-from mcp_server_replicate.server import create_server
-from mcp_server_replicate.models.model import Model, ModelList
-from mcp_server_replicate.models.collection import Collection, CollectionList
-from mcp_server_replicate.models.hardware import Hardware, HardwareList
-from mcp_server_replicate.models.webhook import WebhookPayload
+from mcp-server-replicate.server import create_server
+from mcp-server-replicate.models.model import Model, ModelList
+from mcp-server-replicate.models.collection import Collection, CollectionList
+from mcp-server-replicate.models.hardware import Hardware, HardwareList
+from mcp-server-replicate.models.webhook import WebhookPayload
 
 # Test data
 MOCK_MODEL = {
@@ -48,7 +48,7 @@ async def server():
 @pytest.fixture
 def mock_client():
     """Create mock ReplicateClient."""
-    with patch("mcp_server_replicate.server.ReplicateClient") as mock:
+    with patch("mcp-server-replicate.server.ReplicateClient") as mock:
         client = AsyncMock()
         mock.return_value.__aenter__.return_value = client
         yield client

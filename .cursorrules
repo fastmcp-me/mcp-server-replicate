@@ -33,7 +33,7 @@
   - "Implement proper cleanup in context managers"
 
 // FastMCP specific rules
-"src/mcp_server_replicate/server.py":
+"src/mcp-server-replicate/server.py":
   - "Create FastMCP instance directly with a descriptive name"
   - "Define tools using @mcp.tool() on the instance, not through class inheritance"
   - "Keep tool definitions close to server creation for clarity"
@@ -47,7 +47,7 @@
   - "Use proper typing for tool parameters and returns"
 
 // Template rules
-"src/mcp_server_replicate/templates/**/*.py":
+"src/mcp-server-replicate/templates/**/*.py":
   - "Use JSON Schema for parameter validation"
   - "Implement version tracking for all templates"
   - "Share common parameters via base templates"
@@ -60,7 +60,7 @@
   - "Document parameter interactions"
 
 // API client rules
-"src/mcp_server_replicate/replicate_client.py":
+"src/mcp-server-replicate/replicate_client.py":
   - "Use httpx with proper timeout handling"
   - "Implement exponential backoff with rate limiting"
   - "Use proper API versioning (replicate>=1.0.4)"

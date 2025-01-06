@@ -7,7 +7,7 @@ packages = ["src/mcp_server_replicate"]
 
 [project]
 name = "mcp-server-replicate"
-version = "0.1.4"
+version = "0.1.5"
 description = "FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -90,7 +90,7 @@ module = "replicate.*"
 ignore_missing_imports = true
 
 [tool.coverage.run]
-source = ["mcp_server_replicate"]
+source = ["mcp-server-replicate"]
 branch = true
 
 [tool.coverage.report]
