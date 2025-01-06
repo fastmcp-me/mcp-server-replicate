@@ -83,29 +83,15 @@ code %APPDATA%\Claude\claude_desktop_config.json
 
 ```json
 {
-  "mcpServers": {
-    "replicate": {
-      "command": "uvx",
-      "args": ["mcp-server-replicate"]
+  "replicate": {
+    "command": "uvx",
+    "args": ["mcp-server-replicate"],
+    "env": {
+      "REPLICATE_API_TOKEN": "APIKEY"
     }
   }
 }
 ```
-
-OR
-
-```json
-{
-  "mcpServers": {
-    "replicate": {
-      "command": "uv",
-      "args": ["run", "mcp-server-replicate"]
-    }
-  }
-}
-```
-
-Note: The first option uses UVX (recommended), while the second option uses UV directly.
 
 4. Set your Replicate API key:
 
