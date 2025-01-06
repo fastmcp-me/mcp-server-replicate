@@ -25,6 +25,7 @@ def main() -> NoReturn:
     # Create and run server with configured log level
     mcp = create_server(log_level=log_level)
     mcp.run()
+    raise SystemExit(0)
 
 
 if __name__ == "__main__":
