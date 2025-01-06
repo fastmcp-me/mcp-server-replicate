@@ -1,121 +1,158 @@
-# Contributing Guidelines
+# Contributing to MCP Server Replicate
 
-Thank you for considering contributing to the MCP Server Replicate project! This document outlines our contribution process and commit message conventions.
+First off, thank you for considering contributing to MCP Server Replicate! It's people like you that make it a great tool for everyone.
 
-## Conventional Commits
+## Code of Conduct
 
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This leads to more readable messages that are easy to follow when looking through the project history.
+This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to uphold this code.
 
-### Commit Message Format
-Each commit message consists of a **header**, a **body** and a **footer**. The header has a special format that includes a **type**, a **scope** and a **subject**:
+## How Can I Contribute?
 
-```
-<type>(<scope>): <subject>
-<BLANK LINE>
-<body>
-<BLANK LINE>
-<footer>
-```
+### Reporting Bugs
 
-The **header** is mandatory and the **scope** of the header is optional.
+Before creating bug reports, please check the issue list as you might find out that you don't need to create one. When you are creating a bug report, please include as many details as possible:
 
-### Types
-Must be one of the following:
+- Use a clear and descriptive title
+- Describe the exact steps which reproduce the problem
+- Provide specific examples to demonstrate the steps
+- Describe the behavior you observed after following the steps
+- Explain which behavior you expected to see instead and why
+- Include any error messages or logs
 
-* **feat**: A new feature
-* **fix**: A bug fix
-* **docs**: Documentation only changes
-* **style**: Changes that do not affect the meaning of the code (white-space, formatting, etc)
-* **refactor**: A code change that neither fixes a bug nor adds a feature
-* **perf**: A code change that improves performance
-* **test**: Adding missing tests or correcting existing tests
-* **build**: Changes that affect the build system or external dependencies
-* **ci**: Changes to our CI configuration files and scripts
-* **chore**: Other changes that don't modify src or test files
-* **revert**: Reverts a previous commit
+### Suggesting Enhancements
 
-### Scope
-The scope should be the name of the module affected (as perceived by the person reading the changelog generated from commit messages).
+Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, please include:
 
-### Subject
-The subject contains a succinct description of the change:
+- A clear and descriptive title
+- A detailed description of the proposed functionality
+- Any possible drawbacks or alternatives you've considered
+- If possible, a rough implementation plan
 
-* use the imperative, present tense: "change" not "changed" nor "changes"
-* don't capitalize the first letter
-* no dot (.) at the end
+### Pull Requests
 
-### Body
-The body should include the motivation for the change and contrast this with previous behavior.
-
-### Footer
-The footer should contain any information about **Breaking Changes** and is also the place to reference GitHub issues that this commit **Closes**.
-
-### Examples
-
-```
-feat(server): add ability to specify prediction timeout
-
-Add new timeout parameter to prediction tool that allows setting a custom
-timeout value for model inference requests.
-
-Closes #123
-```
-
-```
-fix(client): handle API rate limiting errors
-
-Add exponential backoff retry logic when encountering rate limit responses
-from Replicate API.
-```
-
-```
-docs(readme): update installation instructions
-
-Update README with new UV-based installation steps and environment setup.
-```
-
-```
-refactor(tools): simplify prediction response handling
-
-Extract response parsing logic into separate function for better reusability
-and testing.
-```
+1. Fork the repo and create your branch from `main`
+2. If you've added code that should be tested, add tests
+3. If you've changed APIs, update the documentation
+4. Ensure the test suite passes
+5. Make sure your code follows the existing style
+6. Issue that pull request!
 
 ## Development Process
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/amazing-feature`)
-3. Make your changes
-4. Write or update tests as needed
-5. Update documentation as needed
-6. Commit your changes following conventional commits format
-7. Push to your fork
-8. Open a Pull Request
+1. Set up your development environment:
 
-## Pull Request Process
+```bash
+# Clone your fork
+git clone https://github.com/your-username/mcp-server-replicate.git
+cd mcp-server-replicate
 
-1. Ensure your PR includes a clear description of the changes
-2. Update relevant documentation
-3. Add/update tests as needed
-4. Ensure all tests pass
-5. Request review from maintainers
-6. Address any review feedback
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate  # Windows
 
-## Code Style
+# Install development dependencies
+pip install -e ".[dev]"
 
-- Follow PEP 8 guidelines
-- Use type hints
-- Add docstrings to all public functions/methods
-- Keep functions/methods focused and concise
-- Use meaningful variable names
+# Install pre-commit hooks
+pre-commit install
+```
 
-## Testing
+2. Make your changes:
 
-- Write tests for all new features
-- Update tests when modifying existing features
+- Write your code
+- Add or update tests
+- Update documentation
+- Run the test suite
+
+3. Commit your changes:
+
+```bash
+# Stage your changes
+git add .
+
+# Commit using conventional commits
+git commit -m "feat: add amazing feature"
+# or
+git commit -m "fix: resolve issue with something"
+```
+
+4. Push and create a PR:
+
+```bash
+git push origin your-branch-name
+```
+
+## Style Guide
+
+### Python Code Style
+
+- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/)
+- Use [Black](https://github.com/psf/black) for formatting
+- Use [Ruff](https://github.com/astral-sh/ruff) for linting
+- Use [mypy](https://github.com/python/mypy) for type checking
+- Write [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
+
+### Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` for new features
+- `fix:` for bug fixes
+- `docs:` for documentation changes
+- `style:` for formatting changes
+- `refactor:` for code refactoring
+- `test:` for adding tests
+- `chore:` for maintenance tasks
+
+### Testing
+
+- Write unit tests for new functionality
 - Ensure all tests pass before submitting PR
 - Maintain or improve code coverage
+- Test edge cases and error conditions
 
-## Questions?
+## Documentation
 
-If you have questions about the contribution process or need help getting started, please open a discussion in the GitHub repository.
+- Update README.md if needed
+- Add docstrings to new functions/classes
+- Update API documentation
+- Include examples for new features
+
+## Review Process
+
+1. Automated checks must pass:
+
+   - Tests
+   - Linting
+   - Type checking
+   - Code coverage
+
+2. Code review requirements:
+
+   - At least one approval
+   - No unresolved comments
+   - All automated checks pass
+
+3. Merge requirements:
+   - Up-to-date with main branch
+   - No conflicts
+   - All review requirements met
+
+## Getting Help
+
+- Check the [documentation](docs/)
+- Join our [Discord community](https://discord.gg/cursor)
+- Ask in GitHub Discussions
+- Tag maintainers in issues/PRs
+
+## Recognition
+
+Contributors will be recognized in:
+
+- The project's README
+- Release notes
+- GitHub's contributors page
+
+Thank you for contributing to MCP Server Replicate! 🎉

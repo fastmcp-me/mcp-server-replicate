@@ -1,111 +1,200 @@
-# MCP Server for Replicate API
+# MCP Server Replicate
 
-A Model Context Protocol (MCP) server implementation for the Replicate API, enabling AI model inference through a standardized protocol.
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Type Checker](https://img.shields.io/badge/type%20checker-mypy-blue.svg)](https://github.com/python/mypy)
+[![Ruff](https://img.shields.io/badge/linter-ruff-red.svg)](https://github.com/astral-sh/ruff)
+
+A FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference with a focus on image generation.
 
 ## Features
 
-- FastMCP server implementation using MCP SDK 1.2.0+
-- Integration with Replicate API for model inference
-- Decorator-based tool definitions
-- Standardized tool and resource interfaces
-- Modern Python development practices
+- 🖼️ Resource-based image generation and management
+- 🔄 Real-time updates through subscriptions
+- 📝 Template-driven parameter configuration
+- 🔍 Comprehensive model discovery and selection
+- 🪝 Webhook integration for external notifications
+- 🎨 Quality and style presets for optimal results
+- 📊 Progress tracking and status monitoring
+- 🔒 Secure API key management
 
-## Requirements
+## Available Prompts
 
-- Python 3.11+
+The server provides several specialized prompts for different tasks:
+
+### Text to Image (Primary)
+
+Our most thoroughly tested and robust prompt. Optimized for generating high-quality images from text descriptions with:
+
+- Detailed style control
+- Quality presets (draft, balanced, quality, extreme)
+- Size and aspect ratio customization
+- Progress tracking and real-time updates
+
+Example:
+
+```
+Create a photorealistic mountain landscape at sunset with snow-capped peaks, quality level: quality, style: photorealistic
+```
+
+### Other Prompts
+
+- **Image to Image**: Transform existing images (coming soon)
+- **Model Selection**: Get help choosing the right model for your task
+- **Parameter Help**: Understand and configure model parameters
+
+## Prerequisites
+
+- Python 3.11 or higher
+- A Replicate API key (get one at https://replicate.com/account)
 - [UV](https://github.com/astral-sh/uv) for dependency management
-- Replicate API key
 
 ## Installation
 
-1. Clone the repository:
+> **Note**: This package will be available on PyPI shortly. For now, install directly from GitHub:
+
 ```bash
-git clone https://github.com/yourusername/mcp-server-replicate.git
+# Install UV if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Clone and set up the project
+git clone https://github.com/cursor-ai/mcp-server-replicate.git
 cd mcp-server-replicate
-```
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your Replicate API key
-```
-
-3. Install dependencies using UV:
-```bash
+# Install dependencies using UV
 uv pip install --system
 ```
 
+## Claude Desktop Integration
+
+1. Make sure you have the latest version of Claude Desktop installed
+2. Open your Claude Desktop configuration:
+
+```bash
+# macOS
+code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+
+# Windows
+code %APPDATA%\Claude\claude_desktop_config.json
+```
+
+3. Add the server configuration:
+
+```json
+{
+  "mcpServers": {
+    "replicate": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/ABSOLUTE/PATH/TO/mcp-server-replicate",
+        "run",
+        "python",
+        "-m",
+        "mcp_server_replicate"
+      ]
+    }
+  }
+}
+```
+
+4. Set your Replicate API key:
+
+```bash
+export REPLICATE_API_TOKEN=your_api_key_here
+```
+
+5. Restart Claude Desktop completely
+
+You should now see the 🔨 icon in Claude Desktop, indicating that the MCP server is available.
+
+## Usage
+
+Once connected to Claude Desktop, you can:
+
+1. Generate images with natural language:
+
+   ```
+   Create a photorealistic mountain landscape at sunset with snow-capped peaks
+   ```
+
+2. Browse your generations:
+
+   ```
+   Show me my recent image generations
+   ```
+
+3. Search through generations:
+
+   ```
+   Find my landscape generations
+   ```
+
+4. Check generation status:
+   ```
+   What's the status of my last generation?
+   ```
+
+## Troubleshooting
+
+### Server not showing up in Claude Desktop
+
+1. Check the Claude Desktop logs:
+
+```bash
+tail -n 20 -f ~/Library/Logs/Claude/mcp*.log
+```
+
+2. Verify your configuration:
+
+- Make sure the path in `claude_desktop_config.json` is absolute
+- Ensure UV is installed and in your PATH
+- Check that your Replicate API key is set
+
+3. Try restarting Claude Desktop
+
+For more detailed troubleshooting, see our [Debugging Guide](docs/debugging.md).
+
+## Documentation
+
+- [Implementation Plan](PLAN.md)
+- [Contributing Guide](CONTRIBUTING.md)
+- [API Reference](docs/api.md)
+- [Resource System](docs/resources.md)
+- [Template System](docs/templates.md)
+
 ## Development
 
-This project uses UV for dependency management and virtual environment handling. Here are some common commands:
-
-### Adding Dependencies
+1. Clone the repository:
 
 ```bash
-# Add a new dependency
-uv add package-name
-
-# Add a development dependency
-uv add --dev package-name
+git clone https://github.com/cursor-ai/mcp-server-replicate.git
+cd mcp-server-replicate
 ```
 
-### Running Commands
+2. Install development dependencies:
 
 ```bash
-# Run a command in the virtual environment
-uv run python script.py
-
-# Run an installed CLI tool
-uv run cli-tool-name
-
-# Run a command without installing (one-off execution)
-uvx cli-tool-name
+uv pip install --system ".[dev]"
 ```
 
-### Managing Dependencies
+3. Install pre-commit hooks:
 
 ```bash
-# Update dependencies
-uv pip sync
-
-# Show outdated packages
-uv pip list --outdated
+pre-commit install
 ```
 
-## Project Structure
+4. Run tests:
 
-```
-mcp-server-replicate/
-├── .env.example        # Example environment variables
-├── .gitignore         # Git ignore rules
-├── README.md          # Project documentation
-├── NOTES.md           # Implementation notes and guidelines
-├── TASKS.md           # Development tasks and roadmap
-├── TESTING.md         # Testing guidelines and practices
-├── WORKFLOW.md        # Development workflow documentation
-├── pyproject.toml     # Project metadata and dependencies
-├── src/               # Source code directory
-│   └── mcp_server_replicate/
-│       ├── __init__.py
-│       └── server.py  # FastMCP server implementation
-├── tests/             # Test directory
-│   ├── __init__.py
-│   └── test_server.py # Server tests
-└── uv.lock            # Locked dependencies
+```bash
+pytest
 ```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/):
-   ```bash
-   git commit -m "feat: add amazing feature"
-   git commit -m "fix: resolve issue with something"
-   ```
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
