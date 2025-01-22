@@ -6,6 +6,7 @@
 [![Type Checker](https://img.shields.io/badge/type%20checker-mypy-blue.svg)](https://github.com/python/mypy)
 [![Ruff](https://img.shields.io/badge/linter-ruff-red.svg)](https://github.com/astral-sh/ruff)
 [![PyPI version](https://badge.fury.io/py/mcp-server-replicate.svg)](https://pypi.org/project/mcp-server-replicate/)
+[![smithery badge](https://smithery.ai/badge/@gerred/mcp-server-replicate)](https://smithery.ai/server/@gerred/mcp-server-replicate)
 
 A FastMCP server implementation for the Replicate API, providing resource-based access to AI model inference with a focus on image generation.
 
@@ -53,6 +54,15 @@ Create a photorealistic mountain landscape at sunset with snow-capped peaks, qua
 
 ## Installation
 
+### Installing via Smithery
+
+To install MCP Server Replicate for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@gerred/mcp-server-replicate):
+
+```bash
+npx -y @smithery/cli install @gerred/mcp-server-replicate --client claude
+```
+
+### Installing Manually
 You can install the package directly from PyPI:
 
 ```bash
